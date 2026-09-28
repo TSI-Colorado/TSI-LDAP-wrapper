@@ -1,5 +1,7 @@
 'use strict';
 
+const crypto = require("crypto"); //GG: dependency for password generation function
+
 const config = require('./config');
 const helper = require('./helper');
 const auth = require('./graph.auth');
@@ -193,6 +195,16 @@ server.bind(SUFFIX, async (req, res, next) => {
                 var check = await auth.loginWithUsernamePassword(userAttributes["AzureADuserPrincipalName"], pass);
                 helper.log("server.js", "server.bind", "check", check);
 
+               //GG: This conditional will add password token and generate SMB hash whenever it hasn't been initialized
+                if (!userAttributes.hasOwnPropertyCI("nasgulToken") || userAttributes["nasgulToken"].trim().length === 0) {
+                    var token = generatePassword();
+                    userAttributes["nasgulToken"] = token;
+                    userAttributes["sambaNTPassword"] = helper.md4(token);
+                    userAttributes["sambaPwdLastSet"] = Math.floor(Date.now() / 1000);
+                    db[dn] = userAttributes;
+                    helper.SaveJSONtoFile(db, config.LDAP_DATAFILE);
+                }
+
                 var userNtHash = helper.md4(pass);
 
                 if (check === 1) {
@@ -203,7 +215,8 @@ server.bind(SUFFIX, async (req, res, next) => {
 
                         if (userAttributes["sambaNTPassword"] != userNtHash) {
                             helper.log("server.js", "server.bind", username, "Saving NT password hash for user ", dn);
-                            userAttributes["sambaNTPassword"] = userNtHash;
+                            //GG: Commented following line to avoid setting of SMB hash through LDAP authentications. SMB password and hash are treated independently of the Entra credentials and managed separately.
+                            //userAttributes["sambaNTPassword"] = userNtHash;
                         }
 
                         helper.log("server.js", "server.bind", username, "Saving PwdLastSet for user ", dn);
@@ -598,6 +611,18 @@ server.on("uncaughtException", (error) => {
     helper.error("server.js", "!!! uncaughtException !!!", error);
 });
 
+//GG: Added entire following function for password generation
+function generatePassword(length = 20) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-[]{}<>?=";
+  const bytes = crypto.randomBytes(length);
+  let password = "";
+
+  for (let i = 0; i < length; i++) {
+    password += chars[bytes[i] % chars.length];
+  }
+
+  return password;
+}
 
 // return database
 module.exports = server;

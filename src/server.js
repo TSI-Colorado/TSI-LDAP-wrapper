@@ -280,6 +280,9 @@ server.search(SUFFIX, authorize, (req, res, next) => {
             let didSomething = false;
 
             for (var key of Object.keys(searchableEntries)) {
+                //GG: Added following line to allow cn=autoprov to be accessible with anonymous binds
+                if (key.startsWith('cn=autoprov')) continue;
+
                 if (!searchableEntries[key].hasOwnPropertyCI("namingContexts")) {
                     delete searchableEntries[key];
                     didSomething = true;

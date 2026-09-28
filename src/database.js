@@ -588,22 +588,25 @@ async function mergeAzureUserEntries(db) {
                     userPrincipalName: user.userPrincipalName,
                     info: 'RPOC is not possible for Guest user without accepted invitation'
                 });
+            continue; //GG: Added to break unnecessary if ladder
         }
         // ignore personal microsoft accounts, because RPOC is not possible 
-        else if (isMicrosoftAccount) {
-            helper.warn("database.js", "mergeAzureUserEntries", 'Guest user (#EXT#) ignored',
-                {
-                    mail: user.mail,
-                    userPrincipalName: user.userPrincipalName,
-                    info: 'RPOC is not possible for personal microsoft accounts'
-                });
-        }
-        else {
-
+//GG: Commented this if case because we do want all guest accounts in ldap
+//        else if (isMicrosoftAccount) {
+//            helper.warn("database.js", "mergeAzureUserEntries", 'Guest user (#EXT#) ignored',
+//                {
+//                    mail: user.mail,
+//                    userPrincipalName: user.userPrincipalName,
+//                    info: 'RPOC is not possible for personal microsoft accounts'
+//                });
+//        }
+//        else {
+        if (true) { //GG: Added this to break if ladder without having to reformat all code
             // try handling "#EXT#"-user
             if (isGuestOrExternalUser && user.hasOwnProperty('mail')) {
                 let old_userPrincipalName = user.userPrincipalName;
-                user.userPrincipalName = user.mail;
+                user.userPrincipalName = user.mail.substring(0, user.userPrincipalName.indexOf("@"));
+                //user.userPrincipalName = user.mail;  //GG: replaced by above line to extract only user portion of email
                 if (userPrincipalName.indexOf("#EXT#") > -1) {
                     userPrincipalName = userPrincipalName.substring(0, userPrincipalName.indexOf("#EXT#"));
                 } else {
@@ -612,6 +615,7 @@ async function mergeAzureUserEntries(db) {
                     issuers.forEach(issuer => userPrincipalName = userPrincipalName.replace('@' + issuer.issuer, ''));
                     userPrincipalName = userPrincipalName.replace('#EXT#', '');
                 }
+                userPrincipalName = user.userPrincipalName;  //GG: added to make change effective later in the script, otherwise ldap wasn't updating entry correctly
 
                 AzureADuserExternal = 1;
 

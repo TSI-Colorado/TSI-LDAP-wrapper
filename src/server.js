@@ -191,8 +191,14 @@ server.bind(SUFFIX, async (req, res, next) => {
                 helper.log("server.js", "server.bind", username, "Failed login -> mybe not synced yet?");
                 return next(new ldap.InvalidCredentialsError());
             } else {
+               //GG: If/else block added to allow guest accounts to authenticate locally through ldap, instead of Entra
+                if (userAttributes["AzureADuserExternal"] === 1) {
+                   var check = 2;
+                } else {
+                    var check = await auth.loginWithUsernamePassword(userAttributes["AzureADuserPrincipalName"], pass);
+                }
 
-                var check = await auth.loginWithUsernamePassword(userAttributes["AzureADuserPrincipalName"], pass);
+                //var check = await auth.loginWithUsernamePassword(userAttributes["AzureADuserPrincipalName"], pass);  //GG: Original code reused in block above. Commented here to allow original to stay where it was
                 helper.log("server.js", "server.bind", "check", check);
 
                //GG: This conditional will add password token and generate SMB hash whenever it hasn't been initialized

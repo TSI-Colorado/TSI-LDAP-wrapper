@@ -936,5 +936,14 @@ database.getEntries = function () { return dbEntries; };
  */
 database.getSchemaEntries = function () { return schemaEntries; };
 
+/**
+ * GG: Added to allow manual sync from server.js. Forces a sync with Entra.
+ * @returns Nothing is returned
+ */
+database.manualRefresh = async function () {
+    lastRefresh = 0;
+    await refreshDBentries();
+};
+
 // return database
 module.exports = database;

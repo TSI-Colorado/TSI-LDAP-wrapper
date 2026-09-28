@@ -425,6 +425,18 @@ server.compare(SUFFIX, authorize, (req, res, next) => {
 server.add(SUFFIX, authorize, (req, res, next) => {
     const dn = req.dn.toString().toLowerCase().replace(/ {2,}/g, ' ').replace(/, /g, ',');
 
+    //GG: Added this entire block to allow triggering of a manual refresh by attempting to add 'cn=forceManualRefresh'
+    if (dn.startsWith('cn=forcemanualrefresh')) {
+        helper.warn("server.js", "add", "Manual refresh requested");
+        database.manualRefresh().then(() => {
+            db = database.getEntries();
+            helper.warn("server.js", "add", "Manual refresh finished!");
+        });
+
+        res.end();
+        return next();
+    }
+
     if (db[dn]) {
         helper.error("server.js", "add", "EntryAlreadyExistsError", dn);
         return next(new ldap.EntryAlreadyExistsError(dn));
